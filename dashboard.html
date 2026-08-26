@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Dashboard | Hashir Emadi</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #050505;
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    header {
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 25px;
+      border-bottom: 1px solid #222;
+      background: #0b0b0b;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .logout {
+      border: 1px solid #333;
+      background: transparent;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .logout:hover {
+      background: #fff;
+      color: #000;
+    }
+
+    main {
+      padding: 30px 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    h1 {
+      font-size: 30px;
+      margin-bottom: 8px;
+    }
+
+    .welcome {
+      color: #777;
+      margin-bottom: 30px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 35px;
+    }
+
+    .card {
+      background: #0d0d0d;
+      border: 1px solid #222;
+      border-radius: 15px;
+      padding: 22px;
+    }
+
+    .card span {
+      color: #888;
+      font-size: 14px;
+    }
+
+    .card h2 {
+      margin-top: 10px;
+      font-size: 28px;
+    }
+
+    .messages {
+      background: #0d0d0d;
+      border: 1px solid #222;
+      border-radius: 15px;
+      overflow: hidden;
+    }
+
+    .messages-header {
+      padding: 20px;
+      border-bottom: 1px solid #222;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .messages-header h2 {
+      font-size: 20px;
+    }
+
+    #loading {
+      padding: 30px;
+      text-align: center;
+      color: #777;
+    }
+
+    .message {
+      padding: 20px;
+      border-bottom: 1px solid #1d1d1d;
+    }
+
+    .message:last-child {
+      border-bottom: none;
+    }
+
+    .message-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+
+    .name {
+      font-weight: bold;
+    }
+
+    .email {
+      color: #888;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .subject {
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
+    .message-text {
+      color: #bbb;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .delete-btn {
+      background: transparent;
+      border: 1px solid #333;
+      color: #aaa;
+      padding: 7px 10px;
+      border-radius: 7px;
+      cursor: pointer;
+      height: fit-content;
+    }
+
+    .delete-btn:hover {
+      background: #fff;
+      color: #000;
+    }
+
+    .empty {
+      padding: 40px;
+      text-align: center;
+      color: #777;
+    }
+
+    @media (max-width: 700px) {
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      .message-top {
+        flex-direction: column;
+      }
+
+      main {
+        padding: 25px 15px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+
+  <div class="logo">
+    Hashir Emadi
+  </div>
+
+  <button class="logout" id="logoutBtn">
+    Logout
+  </button>
+
+</header>
+
+
+<main>
+
+  <h1>Admin Dashboard</h1>
+
+  <p class="welcome">
+    Manage your portfolio messages and visitors.
+  </p>
+
+
+  <section class="stats">
+
+    <div class="card">
+      <span>Total Messages</span>
+      <h2 id="totalMessages">0</h2>
+    </div>
+
+    <div class="card">
+      <span>Admin</span>
+      <h2 id="adminEmail">---</h2>
+    </div>
+
+    <div class="card">
+      <span>Status</span>
+      <h2>Online</h2>
+    </div>
+
+  </section>
+
+
+  <section class="messages">
+
+    <div class="messages-header">
+      <h2>Contact Messages</h2>
+    </div>
+
+    <div id="loading">
+      Loading messages...
+    </div>
+
+    <div id="messagesList"></div>
+
+  </section>
+
+</main>
+
+
+<script type="module">
+
+  import {
+    getAuth,
+    onAuthStateChanged,
+    signOut
+  } from
+  "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+  import {
+    getFirestore,
+    collection,
+    getDocs,
+    deleteDoc,
+    doc,
+    query,
+    orderBy
+  } from
+  "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+  import { app } from "../js/firebase.js";
+
+
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+
+  const messagesList =
+    document.getElementById("messagesList");
+
+  const loading =
+    document.getElementById("loading");
+
+  const totalMessages =
+    document.getElementById("totalMessages");
+
+  const adminEmail =
+    document.getElementById("adminEmail");
+
+  const logoutBtn =
+    document.getElementById("logoutBtn");
+
+
+  // Check admin login
+
+  onAuthStateChanged(auth, (user) => {
+
+    if (!user) {
+
+      window.location.href = "login.html";
+
+      return;
+
+    }
+
+    adminEmail.textContent = user.email;
+
+    loadMessages();
+
+  });
+
+
+  // Load messages
+
+  async function loadMessages() {
+
+    loading.style.display = "block";
+
+    messagesList.innerHTML = "";
+
+    try {
+
+      const messagesQuery = query(
+        collection(db, "messages"),
+        orderBy("createdAt", "desc")
+      );
+
+      const snapshot =
+        await getDocs(messagesQuery);
+
+
+      totalMessages.textContent =
+        snapshot.size;
+
+
+      loading.style.display = "none";
+
+
+      if (snapshot.empty) {
+
+        messagesList.innerHTML = `
+          <div class="empty">
+            No messages yet.
+          </div>
+        `;
+
+        return;
+
+      }
+
+
+      snapshot.forEach((messageDoc) => {
+
+        const data = messageDoc.data();
+
+        const messageElement =
+          document.createElement("div");
+
+        messageElement.className = "message";
+
+
+        messageElement.innerHTML = `
+
+          <div class="message-top">
+
+            <div>
+              <div class="name">
+                ${escapeHTML(data.name || "Unknown")}
+              </div>
+
+              <div class="email">
+                ${escapeHTML(data.email || "")}
+              </div>
+            </div>
+
+            <button
+              class="delete-btn"
+              data-id="${messageDoc.id}">
+              Delete
+            </button>
+
+          </div>
+
+          <div class="subject">
+            ${escapeHTML(data.subject || "No Subject")}
+          </div>
+
+          <div class="message-text">
+            ${escapeHTML(data.message || "")}
+          </div>
+
+        `;
+
+
+        const deleteButton =
+          messageElement.querySelector(".delete-btn");
+
+
+        deleteButton.addEventListener(
+          "click",
+          () => deleteMessage(messageDoc.id)
+        );
+
+
+        messagesList.appendChild(messageElement);
+
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      loading.textContent =
+        "Unable to load messages.";
+
+    }
+
+  }
+
+
+  // Delete message
+
+  async function deleteMessage(id) {
+
+    const confirmDelete =
+      confirm("Delete this message?");
+
+
+    if (!confirmDelete) return;
+
+
+    try {
+
+      await deleteDoc(
+        doc(db, "messages", id)
+      );
+
+      loadMessages();
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert("Failed to delete message.");
+
+    }
+
+  }
+
+
+  // Logout
+
+  logoutBtn.addEventListener(
+    "click",
+    async () => {
+
+      try {
+
+        await signOut(auth);
+
+        window.location.href =
+          "login.html";
+
+      } catch (error) {
+
+        console.error(error);
+
+      }
+
+    }
+  );
+
+
+  // Security helper
+
+  function escapeHTML(value) {
+
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+
+  }
+
+</script>
+
+</body>
+</html>
