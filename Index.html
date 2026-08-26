@@ -909,6 +909,21 @@ function renderTestimonials(){
 renderTestimonials();
 
 /* ---------- CONTACT FORM ---------- */
+  <form name="customer-query" method="POST" data-netlify="true" action="/success.html">
+    
+    <input type="hidden" name="form-name" value="customer-query">
+
+    <input type="text" name="name" placeholder="Your Name" required>
+
+    <input type="email" name="email" placeholder="Your Email" required>
+
+    <input type="tel" name="phone" placeholder="Phone Number">
+
+    <textarea name="message" placeholder="Your Query" required></textarea>
+
+    <button type="submit">Send Message</button>
+
+</form>
 document.querySelectorAll('.field select').forEach(sel=>{
   sel.addEventListener('change', ()=> sel.closest('.field').classList.add('filled'));
 });
